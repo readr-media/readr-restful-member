@@ -13,7 +13,7 @@ pipeline:
       *{{build.author}}* give *{{build.branch}}* a little push.
     when:
       event: [push]
-      branch: [master, dev]
+      branch: [dev]
 
   get_config_dev:
     image: gcr.io/mirrormedia-1470651750304/drone-cloud-sdk:latest
@@ -21,7 +21,6 @@ pipeline:
     commands:
     - gcloud source repos clone configs rr-configs
     - cp rr-configs/readr-media/readr-restful/dev/main.json ./config/main.json
-    - cp rr-configs/readr-media/readr-restful/*.html ./config/
     when:
       event: [push, pull_request]
       branch: [dev]
@@ -67,7 +66,26 @@ pipeline:
     secrets: [google_credentials]
     when:
       event: [push]
-      branch: [master, dev]
+      branch: [dev]
+
+  deploy_dev:
+    image: nytimes/drone-gke
+    zone: asia-east1-a
+    cluster: dev
+    namespace: default
+    # For debugging
+    dry_run: false
+    verbose: true
+    secrets:
+      - source: google_credentials
+        target: token
+    vars:
+      image: gcr.io/mirrormedia-1470651750304/${DRONE_REPO_NAME}:${DRONE_COMMIT_AUTHOR}_${DRONE_BUILD_NUMBER}
+      app: readr-restful-member
+      tier: backend
+    when:
+      event: [push]
+      branch: dev
 
   pr_test_fail:
     image: plugins/slack
